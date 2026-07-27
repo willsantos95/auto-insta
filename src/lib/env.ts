@@ -25,4 +25,28 @@ const schema = z.object({
   QUEUE_CLAIM_TIMEOUT_MINUTES: z.coerce.number().int().min(1).default(10),
 });
 
-export const env = schema.parse(process.env);
+// O Next importa módulos de rotas durante `next build`. As credenciais reais
+// pertencem ao ambiente de execução do container e não devem ser exigidas nem
+// gravadas na imagem durante a compilação.
+const isProductionBuild =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.npm_lifecycle_event === "build";
+
+const buildOnlyDefaults = {
+  APP_URL: "http://localhost:3000",
+  ADMIN_PASSWORD: "build-only-password",
+  SESSION_SECRET: "build-only-session-secret-1234567890",
+  INTERNAL_API_SECRET: "build-only-internal-secret-1234567890",
+  PRIVACY_CONTACT_EMAIL: "build@example.com",
+  DATABASE_URL: "postgresql://build:build@127.0.0.1:5432/build",
+};
+
+const rawEnvironment = {
+  ...(isProductionBuild ? buildOnlyDefaults : {}),
+  ...process.env,
+  // Compatibilidade com o nome usado no EasyPanel e no painel da Meta.
+  INSTAGRAM_APP_ID:
+    process.env.INSTAGRAM_APP_ID ?? process.env.INSTAGRAM_CLIENT_ID ?? "",
+};
+
+export const env = schema.parse(rawEnvironment);

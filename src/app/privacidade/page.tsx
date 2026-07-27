@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 
+export const dynamic = "force-dynamic";
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-3xl p-6 md:p-12">

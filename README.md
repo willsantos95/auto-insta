@@ -79,3 +79,7 @@ curl -X POST \
 - Não envia mensagem em massa para base fria.
 - Follow-ups são pulados automaticamente quando a janela de 24 horas termina.
 - Resposta privada a comentário possui chave de deduplicação por comentário e automação.
+
+## Correção de build no EasyPanel
+
+As variáveis sensíveis são validadas em tempo de execução. Durante `next build`, o projeto utiliza apenas valores temporários internos para impedir que segredos precisem ser gravados na imagem Docker. O ID do app aceita tanto `INSTAGRAM_CLIENT_ID` quanto `INSTAGRAM_APP_ID`.

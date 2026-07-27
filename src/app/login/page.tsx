@@ -1,10 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
-  const params = useSearchParams();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +21,8 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    window.location.href = params.get("next") || "/painel";
+    const nextPath = new URLSearchParams(window.location.search).get("next");
+    window.location.href = nextPath || "/painel";
   }
 
   return (
