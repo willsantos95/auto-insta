@@ -1,0 +1,7 @@
+CORREÇÃO DO DEPLOY — PUBLIC AUSENTE
+
+Envie estes itens para a raiz do repositório GitHub:
+- Dockerfile (substituir o atual)
+- pasta public contendo robots.txt
+
+A correção garante que a pasta public seja criada durante o build, mesmo que o GitHub não tenha enviado uma pasta vazia.
