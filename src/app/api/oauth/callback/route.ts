@@ -4,21 +4,34 @@ import { exchangeLongToken, exchangeShortToken, fetchMyProfile, subscribeAccount
 import { saveInstagramConnection } from "@/lib/config";
 import { env } from "@/lib/env";
 
+function painelRedirect(message: string) {
+  return NextResponse.redirect(`${env.APP_URL.replace(/\/$/, "")}/painel?oauth_error=${encodeURIComponent(message)}`);
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const code = url.searchParams.get("code");
+  const rawCode = url.searchParams.get("code");
+  const code = rawCode?.trim().replace(/#_$/, "") ?? null;
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error_description") || url.searchParams.get("error");
-  if (error) return NextResponse.redirect(`${env.APP_URL}/painel?oauth_error=${encodeURIComponent(error)}`);
+
+  if (error) return painelRedirect(error);
 
   const cookieStore = await cookies();
   const expectedState = cookieStore.get("ig_oauth_state")?.value;
+  const redirectUri = cookieStore.get("ig_oauth_redirect_uri")?.value;
+
   if (!code || !state || state !== expectedState) {
     return NextResponse.json({ error: "Estado OAuth inválido ou expirado." }, { status: 400 });
   }
 
+  if (!redirectUri) {
+    return painelRedirect("A URL OAuth expirou. Clique em Conectar Instagram novamente.");
+  }
+
   try {
-    const short = await exchangeShortToken(code);
+    // Usa exatamente a mesma string enviada no diálogo OAuth.
+    const short = await exchangeShortToken(code, redirectUri);
     const long = await exchangeLongToken(short.access_token);
     const profile = await fetchMyProfile(long.access_token);
     await subscribeAccount(profile.user_id, long.access_token);
@@ -30,11 +43,16 @@ export async function GET(request: Request) {
       name: profile.name,
       profilePictureUrl: profile.profile_picture_url,
     });
-    const response = NextResponse.redirect(`${env.APP_URL}/painel?connected=1`);
+
+    const response = NextResponse.redirect(`${env.APP_URL.replace(/\/$/, "")}/painel?connected=1`);
     response.cookies.delete("ig_oauth_state");
+    response.cookies.delete("ig_oauth_redirect_uri");
     return response;
   } catch (oauthError) {
     const message = oauthError instanceof Error ? oauthError.message : String(oauthError);
-    return NextResponse.redirect(`${env.APP_URL}/painel?oauth_error=${encodeURIComponent(message)}`);
+    const response = painelRedirect(message);
+    response.cookies.delete("ig_oauth_state");
+    response.cookies.delete("ig_oauth_redirect_uri");
+    return response;
   }
 }

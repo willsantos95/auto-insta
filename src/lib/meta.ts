@@ -15,22 +15,38 @@ async function parseMetaResponse(response: Response) {
   return data;
 }
 
-export async function exchangeShortToken(code: string) {
-  const body = new URLSearchParams({
-    client_id: env.INSTAGRAM_APP_ID,
-    client_secret: env.INSTAGRAM_APP_SECRET,
-    grant_type: "authorization_code",
-    redirect_uri: `${env.APP_URL}/api/oauth/callback`,
-    code,
-  });
+export async function exchangeShortToken(code: string, redirectUri: string) {
+  // A documentação da Meta demonstra esta troca como multipart/form-data
+  // (curl -F). FormData deixa o runtime criar o boundary corretamente.
+  const body = new FormData();
+  body.set("client_id", env.INSTAGRAM_APP_ID);
+  body.set("client_secret", env.INSTAGRAM_APP_SECRET);
+  body.set("grant_type", "authorization_code");
+  body.set("redirect_uri", redirectUri);
+  body.set("code", code);
 
   const response = await fetch("https://api.instagram.com/oauth/access_token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
     cache: "no-store",
   });
-  return parseMetaResponse(response) as Promise<{ access_token: string; user_id: string }>;
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const metaMessage =
+      typeof data?.error_message === "string"
+        ? data.error_message
+        : typeof data?.error?.message === "string"
+          ? data.error.message
+          : JSON.stringify(data);
+
+    throw new Error(
+      `Falha ao trocar o código OAuth (${response.status}): ${metaMessage}. ` +
+        `Redirect usado: ${redirectUri}. Se persistir, confira se INSTAGRAM_APP_SECRET pertence ao app do Instagram ${env.INSTAGRAM_APP_ID}.`,
+    );
+  }
+
+  return data as { access_token: string; user_id: string };
 }
 
 export async function exchangeLongToken(shortToken: string) {
