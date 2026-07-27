@@ -180,6 +180,46 @@ async function processComment(accountId: string, value: any, timestamp?: number)
   await query(`UPDATE events SET processed_at=now() WHERE id=$1`, [eventId]);
 }
 
+async function getPendingReplyAutomation(contactId: string): Promise<Automation | null> {
+  const result = await query<{
+    last_automation_id: string | null;
+    welcome_sent_at: Date | null;
+    followup_exists: boolean;
+  }>(
+    `SELECT c.last_automation_id,
+            welcome.sent_at AS welcome_sent_at,
+            CASE
+              WHEN welcome.sent_at IS NULL OR c.last_automation_id IS NULL THEN false
+              ELSE EXISTS (
+                SELECT 1
+                  FROM queue followup
+                 WHERE followup.contact_id = c.instagram_user_id
+                   AND followup.automation_id = c.last_automation_id
+                   AND followup.dedupe_key LIKE '%:followup:%'
+                   AND followup.created_at >= welcome.sent_at
+              )
+            END AS followup_exists
+       FROM contacts c
+       LEFT JOIN LATERAL (
+         SELECT q.sent_at
+           FROM queue q
+          WHERE q.contact_id = c.instagram_user_id
+            AND q.automation_id = c.last_automation_id
+            AND q.status = 'sent'
+            AND q.sent_at >= now() - interval '24 hours'
+            AND (q.dedupe_key LIKE '%:private:%' OR q.dedupe_key LIKE '%:welcome:%')
+          ORDER BY q.sent_at DESC
+          LIMIT 1
+       ) welcome ON true
+      WHERE c.instagram_user_id = $1`,
+    [contactId],
+  );
+
+  const row = result.rows[0];
+  if (!row?.last_automation_id || !row.welcome_sent_at || row.followup_exists) return null;
+  return getAutomation(row.last_automation_id);
+}
+
 async function processMessage(accountId: string, messaging: any) {
   const message = messaging.message;
   if (!message || message.is_echo) return;
@@ -202,29 +242,30 @@ async function processMessage(accountId: string, messaging: any) {
   if (!eventId) return;
 
   let automation: Automation | null = null;
+  let shouldEnqueueFollowups = false;
+
   if (quickPayload?.startsWith("AUTO_CONFIRM:")) {
     automation = await getAutomation(quickPayload.slice("AUTO_CONFIRM:".length));
+    shouldEnqueueFollowups = Boolean(automation);
   } else if (text) {
-    automation = await findMatchingAutomation({ trigger: storyReply ? "story" : "dm", text });
+    // Uma resposta à DM de boas-vindas deve liberar o link antes de ser
+    // interpretada como o início de uma nova automação de DM.
+    automation = await getPendingReplyAutomation(senderId);
+    shouldEnqueueFollowups = Boolean(automation);
+
+    if (!automation) {
+      automation = await findMatchingAutomation({ trigger: storyReply ? "story" : "dm", text });
+    }
   }
 
   await upsertContact({ userId: senderId, automationId: automation?.id, inboundReply: true });
 
-  if (quickPayload?.startsWith("AUTO_CONFIRM:") && automation) {
+  if (shouldEnqueueFollowups && automation) {
     await enqueueFollowups(automation, senderId, `event:${eventId}`);
   } else if (automation) {
     await queueWelcome({ automation, eventId, accountId, senderId, isPrivateReply: false });
-  } else if (text) {
-    const contact = await query<{ last_automation_id: string | null }>(
-      `SELECT last_automation_id FROM contacts WHERE instagram_user_id=$1`,
-      [senderId],
-    );
-    const lastAutomationId = contact.rows[0]?.last_automation_id;
-    if (lastAutomationId) {
-      const lastAutomation = await getAutomation(lastAutomationId);
-      if (lastAutomation) await enqueueFollowups(lastAutomation, senderId, `event:${eventId}`);
-    }
   }
+
   await query(`UPDATE events SET processed_at=now() WHERE id=$1`, [eventId]);
 }
 

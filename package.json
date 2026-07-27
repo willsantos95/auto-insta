@@ -1,6 +1,6 @@
 {
   "name": "instagram-auto-easypanel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "engines": {
     "node": ">=22.0.0"
@@ -8,10 +8,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npm run db:migrate && next start -H 0.0.0.0 -p 3000",
+    "start": "npm run db:migrate && node scripts/start.mjs",
     "worker": "tsx src/worker.ts",
     "db:migrate": "tsx scripts/migrate.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start:web": "next start -H 0.0.0.0 -p 3000"
   },
   "dependencies": {
     "next": "^16.0.0",

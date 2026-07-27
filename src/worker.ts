@@ -13,7 +13,7 @@ async function run() {
   while (!stopped) {
     try {
       const didWork = await processOne();
-      await sleep(didWork ? env.WORKER_INTERVAL_MS : 2_000);
+      await sleep(didWork ? env.WORKER_INTERVAL_MS : Math.max(250, env.WORKER_INTERVAL_MS));
     } catch (error) {
       console.error("Erro no ciclo do worker:", error);
       await sleep(5_000);

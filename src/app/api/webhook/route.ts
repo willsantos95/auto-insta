@@ -21,8 +21,14 @@ export async function POST(request: Request) {
   }
   const payload = JSON.parse(raw.toString("utf8"));
   await processWebhookPayload(payload);
+
+  // Processa imediatamente o primeiro item vencido. Isso evita que o link
+  // dependa da chegada de um segundo webhook quando há atraso configurado.
+  await drainQueue(1);
+
+  // O worker contínuo cuida dos atrasos e o after() ajuda a esvaziar rajadas.
   after(async () => {
-    await drainQueue(3);
+    await drainQueue(5);
   });
   return Response.json({ received: true });
 }
