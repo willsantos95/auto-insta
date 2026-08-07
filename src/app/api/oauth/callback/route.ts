@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exchangeLongToken, exchangeShortToken, fetchMyProfile, subscribeAccount } from "@/lib/meta";
-import { saveInstagramConnection } from "@/lib/config";
+import { saveInstagramConnection, saveInstagramAccount, setOwnerUserId } from "@/lib/config";
 import { env } from "@/lib/env";
 
 function painelRedirect(message: string) {
@@ -35,6 +35,18 @@ export async function GET(request: Request) {
     const long = await exchangeLongToken(short.access_token);
     const profile = await fetchMyProfile(long.access_token);
     await subscribeAccount(profile.user_id, long.access_token);
+
+    // Salva na nova tabela de múltiplas contas
+    await saveInstagramAccount({
+      accessToken: long.access_token,
+      expiresAt: new Date(Date.now() + long.expires_in * 1000),
+      userId: profile.user_id,
+      username: profile.username,
+      name: profile.name,
+      profilePictureUrl: profile.profile_picture_url,
+    });
+
+    // Mantém compatibilidade com código legado (salva também na tabela config)
     await saveInstagramConnection({
       accessToken: long.access_token,
       expiresAt: new Date(Date.now() + long.expires_in * 1000),
@@ -43,6 +55,9 @@ export async function GET(request: Request) {
       name: profile.name,
       profilePictureUrl: profile.profile_picture_url,
     });
+
+    // Define este usuário como dono (filtro para comentários)
+    await setOwnerUserId(profile.user_id);
 
     const response = NextResponse.redirect(`${env.APP_URL.replace(/\/$/, "")}/painel?connected=1`);
     response.cookies.delete("ig_oauth_state");

@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AppConfig } from "@/lib/config";
+import type { AppConfig, InstagramAccount } from "@/lib/config";
 import type { Automation } from "@/lib/automations";
 import { Tabs } from "@/components/Tabs";
 import { FormSection } from "@/components/FormSection";
@@ -10,6 +10,8 @@ import { TriggerSelector } from "@/components/TriggerSelector";
 import { PreviewPanel } from "@/components/PreviewPanel";
 import { MessagePreview } from "@/components/MessagePreview";
 import { FieldStatus } from "@/components/FieldStatus";
+import { AccountsManager } from "@/components/AccountsManager";
+import { AccountSelector } from "@/components/AccountSelector";
 
 const blank = {
   name: "",
@@ -27,6 +29,7 @@ const blank = {
   link_delay_seconds: 0,
   reminder_text: "Passando para lembrar do link que enviei 😊",
   reminder_delay_seconds: 3600,
+  account_id: "",
 };
 
 function formatDate(value: string | Date | null) {
@@ -41,9 +44,11 @@ function formatDate(value: string | Date | null) {
 export default function DashboardClient({
   initialConfig,
   initialAutomations,
+  initialAccounts,
 }: {
   initialConfig: AppConfig;
   initialAutomations: Automation[];
+  initialAccounts: InstagramAccount[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState(blank);
@@ -51,6 +56,7 @@ export default function DashboardClient({
   const [message, setMessage] = useState("");
   const [media, setMedia] = useState<Array<{ id: string; media_type: string; media_url?: string; thumbnail_url?: string; caption?: string; permalink?: string }>>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
+  const [connectingAccount, setConnectingAccount] = useState(false);
 
   const connected = Boolean(initialConfig.instagram_user_id);
   const warning = useMemo(() => {
@@ -65,6 +71,17 @@ export default function DashboardClient({
         ? current.triggers.filter((item) => item !== trigger)
         : [...current.triggers, trigger],
     }));
+  }
+
+  async function handleConnectAccount() {
+    setConnectingAccount(true);
+    window.location.href = "/api/oauth/start";
+  }
+
+  async function handleDisconnectAccount(accountId: string) {
+    if (!confirm("Desconectar esta conta?")) return;
+    // TODO: Implement account disconnection API
+    alert("Desconexão ainda não implementada. Use o script delete-account.sql");
   }
 
   async function create(event: FormEvent) {
@@ -87,6 +104,7 @@ export default function DashboardClient({
       link_delay_seconds: Number(form.link_delay_seconds),
       reminder_text: form.reminder_text || null,
       reminder_delay_seconds: form.reminder_text ? Number(form.reminder_delay_seconds) : null,
+      account_id: form.account_id || null,
     };
     const response = await fetch("/api/automations", {
       method: "POST",
@@ -130,6 +148,7 @@ export default function DashboardClient({
         link_delay_seconds: automation.link_delay_seconds,
         reminder_text: automation.reminder_text,
         reminder_delay_seconds: automation.reminder_delay_seconds,
+        account_id: automation.account_id || null,
       }),
     });
     if (!response.ok) setMessage("Não foi possível alterar o status.");
@@ -156,25 +175,27 @@ export default function DashboardClient({
     <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
       {/* Header */}
       <header className="border-b border-zinc-700 bg-zinc-900/80 backdrop-blur sticky top-0 z-40">
-        <div className="flex items-center justify-between gap-4 p-6 mx-auto max-w-7xl">
-          <div>
-            <p className="text-xs font-bold text-violet-400 uppercase tracking-wider">Instagram Auto</p>
-            <h1 className="text-2xl font-bold text-zinc-100">Painel de Automações</h1>
-          </div>
-          {connected ? (
-            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-300">
-              ✓ Conectado: @{initialConfig.instagram_username}
-              <br />
-              <span className="text-xs text-emerald-400/70">Token até {formatDate(initialConfig.token_expires_at)}</span>
+        <div className="p-6 mx-auto max-w-7xl">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div>
+              <p className="text-xs font-bold text-violet-400 uppercase tracking-wider">Instagram Auto</p>
+              <h1 className="text-2xl font-bold text-zinc-100">Painel de Automações</h1>
             </div>
-          ) : (
             <a
               href="/api/oauth/start"
-              className="rounded-lg bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-500 transition-colors"
+              className="rounded-lg bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Conectar Instagram
+              + Conectar Nova Conta
             </a>
-          )}
+          </div>
+
+          {/* Accounts Manager */}
+          <AccountsManager
+            accounts={initialAccounts}
+            onConnect={handleConnectAccount}
+            onDisconnect={handleDisconnectAccount}
+            isLoading={connectingAccount}
+          />
         </div>
       </header>
 
@@ -255,6 +276,14 @@ export default function DashboardClient({
               >
                 {/* Aba 1: Básico */}
                 <div className="space-y-4">
+                  <FormSection title="Selecione a Conta" description="Escolha qual conta do Instagram usará esta automação">
+                    <AccountSelector
+                      accounts={initialAccounts}
+                      selectedAccountId={form.account_id}
+                      onChange={(accountId) => setForm({ ...form, account_id: accountId })}
+                    />
+                  </FormSection>
+
                   <FormSection title="Informações Básicas" description="Configure o nome e status da automação">
                     <div>
                       <label className="block text-sm font-semibold text-zinc-200 mb-2">
@@ -575,9 +604,19 @@ export default function DashboardClient({
                 </div>
               </Tabs>
 
+              <div className="flex gap-3 mt-8">
+                <button
+                  type="submit"
+                  disabled={saving || !form.account_id}
+                  className="px-6 py-3 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? "Salvando..." : "Criar Automação"}
+                </button>
+              </div>
+
               {message && (
                 <div
-                  className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                  className={`rounded-lg px-4 py-3 text-sm font-medium mt-4 ${
                     message.includes("Não foi possível")
                       ? "bg-red-500/10 text-red-300 border border-red-500/20"
                       : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
