@@ -1,6 +1,8 @@
 "use client";
 
 import { InstagramAccount } from "@/lib/config";
+import { Card, CardBody } from "@/components/Card";
+import { Button } from "@/components/Button";
 
 interface AccountsManagerProps {
   accounts: InstagramAccount[];
@@ -9,96 +11,142 @@ interface AccountsManagerProps {
   isLoading?: boolean;
 }
 
-export function AccountsManager({ accounts, onConnect, onDisconnect, isLoading }: AccountsManagerProps) {
+export function AccountsManager({
+  accounts,
+  onConnect,
+  onDisconnect,
+  isLoading,
+}: AccountsManagerProps) {
   const isTokenExpired = (expiresAt: Date | null) => {
     if (!expiresAt) return false;
     return new Date() > new Date(expiresAt);
   };
 
   const getTokenStatus = (expiresAt: Date | null) => {
-    if (!expiresAt) return { status: "expired", label: "Token ausente", color: "text-red-400" };
+    if (!expiresAt) return { status: "expired", label: "Token ausente", color: "text-[var(--error)]" };
 
     const now = new Date();
     const expirationDate = new Date(expiresAt);
-    const daysLeft = Math.floor((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.floor(
+      (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     if (daysLeft < 0) {
-      return { status: "expired", label: "Token expirado", color: "text-red-400" };
+      return {
+        status: "expired",
+        label: "Token expirado",
+        color: "text-[var(--error)]",
+      };
     } else if (daysLeft < 7) {
-      return { status: "expiring", label: `Expira em ${daysLeft}d`, color: "text-yellow-400" };
+      return {
+        status: "expiring",
+        label: `Expira em ${daysLeft}d`,
+        color: "text-[var(--warning)]",
+      };
     } else {
-      return { status: "valid", label: `Válido por ${daysLeft}d`, color: "text-emerald-400" };
+      return {
+        status: "valid",
+        label: `Válido por ${daysLeft}d`,
+        color: "text-[var(--success)]",
+      };
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-100">Contas Conectadas ({accounts.length})</h3>
-        <button
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            Contas Conectadas
+          </h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+            {accounts.length} conta{accounts.length !== 1 ? "s" : ""} conectada
+            {accounts.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <Button
           onClick={onConnect}
           disabled={isLoading}
-          className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          size="sm"
+          variant="primary"
         >
-          {isLoading ? "Conectando..." : "+ Conectar Nova Conta"}
-        </button>
+          {isLoading ? "Conectando..." : "+ Conectar Nova"}
+        </Button>
       </div>
 
       {accounts.length === 0 ? (
-        <div className="bg-zinc-900/50 border border-zinc-700 rounded-lg p-6 text-center">
-          <p className="text-sm text-zinc-400 mb-3">Nenhuma conta Instagram conectada</p>
-          <button
-            onClick={onConnect}
-            disabled={isLoading}
-            className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-500 transition-colors disabled:opacity-50"
-          >
-            Conectar Instagram
-          </button>
-        </div>
+        <Card>
+          <CardBody className="text-center py-12">
+            <p className="text-sm text-[var(--text-secondary)] mb-6">
+              Nenhuma conta Instagram conectada
+            </p>
+            <Button onClick={onConnect} disabled={isLoading} size="md">
+              Conectar Instagram
+            </Button>
+          </CardBody>
+        </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3">
           {accounts.map((account) => {
             const tokenInfo = getTokenStatus(account.token_expires_at);
             return (
-              <div
-                key={account.id}
-                className="flex items-center gap-4 p-4 rounded-lg border border-zinc-700 bg-zinc-900/50 hover:bg-zinc-900/70 transition-colors"
-              >
-                {account.profile_picture_url && (
-                  <img
-                    src={account.profile_picture_url ?? undefined}
-                    alt={account.instagram_username ?? ""}
-                    className="w-12 h-12 rounded-full"
-                  />
-                )}
-                <div className="flex-1">
-                  <p className="font-medium text-zinc-100">@{account.instagram_username}</p>
-                  <p className="text-xs text-zinc-400">{account.instagram_name}</p>
-                  <p className={`text-xs mt-1 ${tokenInfo.color}`}>
-                    {tokenInfo.status === "expired" && "⚠️ "}
-                    {tokenInfo.status === "expiring" && "⏰ "}
-                    {tokenInfo.status === "valid" && "✓ "}
-                    {tokenInfo.label}
-                  </p>
-                </div>
-                {onDisconnect && (
-                  <button
-                    onClick={() => onDisconnect(account.id)}
-                    disabled={isLoading}
-                    className="px-3 py-2 text-xs bg-red-900/20 text-red-400 rounded hover:bg-red-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Desconectar
-                  </button>
-                )}
-              </div>
+              <Card key={account.id}>
+                <CardBody className="flex items-start gap-4 py-4">
+                  {account.profile_picture_url && (
+                    <img
+                      src={account.profile_picture_url ?? undefined}
+                      alt={account.instagram_username ?? ""}
+                      className="w-14 h-14 rounded-full flex-shrink-0 object-cover"
+                    />
+                  )}
+
+                  <div className="flex-1">
+                    <div className="flex items-start gap-2 mb-1">
+                      <div>
+                        <p className="font-semibold text-[var(--text-primary)]">
+                          @{account.instagram_username}
+                        </p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          {account.instagram_name}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${tokenInfo.color}`}
+                      >
+                        {tokenInfo.status === "expired" && "⚠️"}
+                        {tokenInfo.status === "expiring" && "⏰"}
+                        {tokenInfo.status === "valid" && "✓"}
+                        {" "}
+                        {tokenInfo.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--text-tertiary)] font-mono">
+                      ID: {account.id}
+                    </p>
+                  </div>
+
+                  {onDisconnect && (
+                    <Button
+                      onClick={() => onDisconnect(account.id)}
+                      disabled={isLoading}
+                      size="sm"
+                      variant="danger"
+                      className="flex-shrink-0"
+                    >
+                      Desconectar
+                    </Button>
+                  )}
+                </CardBody>
+              </Card>
             );
           })}
         </div>
       )}
 
-      <div className="bg-blue-950/30 border border-blue-700 rounded-lg p-3">
-        <p className="text-xs text-blue-300">
-          💡 Dica: Após conectar uma conta, ela fica disponível para usar em qualquer automação.
+      <div className="bg-[var(--accent-light)] border border-[var(--accent-primary)]/20 rounded-lg p-4">
+        <p className="text-xs text-[var(--accent-dark)] leading-relaxed">
+          <strong>💡 Dica:</strong> Após conectar uma conta, ela fica disponível
+          para usar em qualquer automação.
         </p>
       </div>
     </div>

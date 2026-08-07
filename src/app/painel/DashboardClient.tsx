@@ -7,11 +7,12 @@ import type { Automation } from "@/lib/automations";
 import { Tabs } from "@/components/Tabs";
 import { FormSection } from "@/components/FormSection";
 import { TriggerSelector } from "@/components/TriggerSelector";
-import { PreviewPanel } from "@/components/PreviewPanel";
 import { MessagePreview } from "@/components/MessagePreview";
-import { FieldStatus } from "@/components/FieldStatus";
 import { AccountsManager } from "@/components/AccountsManager";
 import { AccountSelector } from "@/components/AccountSelector";
+import { HeaderNav } from "@/components/HeaderNav";
+import { Button } from "@/components/Button";
+import { Card, CardBody, CardHeader, CardFooter } from "@/components/Card";
 
 const blank = {
   name: "",
@@ -102,9 +103,7 @@ export default function DashboardClient({
         alert(`❌ Erro: ${data.error}`);
         setMessage(`Erro ao desconectar: ${data.error}`);
       } else {
-        alert(
-          `✅ Sucesso!\n\n${data.message}`
-        );
+        alert(`✅ Sucesso!\n\n${data.message}`);
         setMessage(`${data.message}`);
         router.refresh();
       }
@@ -150,7 +149,7 @@ export default function DashboardClient({
       setMessage(data.error || "Não foi possível salvar.");
     } else {
       setForm(blank);
-      setMessage("Automação criada.");
+      setMessage("Automação criada com sucesso!");
       router.refresh();
     }
     setSaving(false);
@@ -207,476 +206,453 @@ export default function DashboardClient({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
+      <style>{`
+        input:not([type="submit"]), 
+        textarea, 
+        select {
+          background-color: var(--bg-primary);
+          color: var(--text-primary);
+          border-color: var(--border-base);
+        }
+        input:focus, textarea:focus, select:focus {
+          border-color: var(--accent-primary);
+          outline: none;
+        }
+      `}</style>
+
       {/* Header */}
-      <header className="border-b border-zinc-700 bg-zinc-900/80 backdrop-blur sticky top-0 z-40">
-        <div className="p-6 mx-auto max-w-7xl">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs font-bold text-violet-400 uppercase tracking-wider">Instagram Auto</p>
-              <h1 className="text-2xl font-bold text-zinc-100">Painel de Automações</h1>
-            </div>
-            <div className="flex gap-3">
-              <a
-                href="/painel/analytics"
-                className="rounded-lg bg-cyan-600 px-5 py-3 font-semibold text-white hover:bg-cyan-500 transition-colors"
-              >
-                📊 Analytics
-              </a>
-              <a
-                href="/api/oauth/start"
-                className="rounded-lg bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                + Conectar Nova Conta
-              </a>
-            </div>
+      <HeaderNav
+        title="Painel de Automações"
+        actions={
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => window.location.href = "/painel/analytics"}
+            >
+              📊 Analytics
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleConnectAccount}
+              disabled={connectingAccount}
+            >
+              + Conectar Nova Conta
+            </Button>
           </div>
+        }
+      />
 
-          {/* Accounts Manager */}
-          <AccountsManager
-            accounts={initialAccounts}
-            onConnect={handleConnectAccount}
-            onDisconnect={handleDisconnectAccount}
-            isLoading={connectingAccount}
-          />
-        </div>
-      </header>
+      <main className="mx-auto max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8">
+          {/* Sidebar - Automações Existentes */}
+          <aside className="lg:col-span-1">
+            <div className="sticky top-24 space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-4">
+                  Automações ({initialAutomations.length})
+                </h2>
 
-      <main className="flex gap-0 mx-auto max-w-7xl">
-        {/* Sidebar */}
-        <aside className="w-64 border-r border-zinc-700 bg-zinc-900 flex-shrink-0 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto p-4">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider px-2 mb-3">
-                Automações ({initialAutomations.length})
-              </h2>
-              <div className="space-y-2">
                 {initialAutomations.length === 0 ? (
-                  <p className="text-xs text-zinc-500 px-2 py-2">Nenhuma automação criada.</p>
+                  <div className="p-4 rounded-lg bg-[var(--bg-secondary)] text-center">
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      Nenhuma automação criada
+                    </p>
+                  </div>
                 ) : (
-                  initialAutomations.map((automation) => (
-                    <div
-                      key={automation.id}
-                      className="rounded-lg border border-zinc-700 bg-zinc-800 p-3 hover:border-violet-500/50 transition-colors group"
-                    >
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-zinc-100 truncate">{automation.name}</h3>
-                          <p className="text-xs text-zinc-400 mt-1">
-                            {automation.triggers.join(" • ")}
-                          </p>
-                        </div>
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded whitespace-nowrap flex-shrink-0 ${
-                            automation.active
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : "bg-zinc-700 text-zinc-400"
-                          }`}
-                        >
-                          {automation.active ? "Ativa" : "Pausada"}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 text-xs">
-                        <button
-                          onClick={() => toggleActive(automation)}
-                          className="text-violet-400 hover:text-violet-300 transition-colors"
-                        >
-                          {automation.active ? "Pausar" : "Ativar"}
-                        </button>
-                        <button
-                          onClick={() => remove(automation.id)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                  <div className="space-y-2">
+                    {initialAutomations.map((automation) => (
+                      <Card key={automation.id}>
+                        <CardBody className="p-3">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm font-medium text-[var(--text-primary)] truncate">
+                                {automation.name}
+                              </h3>
+                              <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
+                                {automation.triggers.join(" • ")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span
+                              className={`px-2 py-1 rounded-full font-medium ${
+                                automation.active
+                                  ? "bg-[var(--success)]/10 text-[var(--success)]"
+                                  : "bg-[var(--text-tertiary)]/10 text-[var(--text-tertiary)]"
+                              }`}
+                            >
+                              {automation.active ? "✓ Ativa" : "⊘ Pausada"}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 mt-2 pt-2 border-t border-[var(--border-subtle)]">
+                            <button
+                              onClick={() => toggleActive(automation)}
+                              className="text-xs text-[var(--accent-primary)] hover:text-[var(--accent-dark)] font-medium"
+                            >
+                              {automation.active ? "Pausar" : "Ativar"}
+                            </button>
+                            <button
+                              onClick={() => remove(automation.id)}
+                              className="text-xs text-[var(--error)] hover:text-[#991b1b] font-medium"
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
-          </div>
-        </aside>
+          </aside>
 
-        {/* Content */}
-        <div className="flex-1 p-8 overflow-y-auto">
-          <div className="max-w-3xl">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-zinc-100 mb-2">Nova Automação</h2>
-              <p className="text-sm text-zinc-400">Configure uma automação para responder automaticamente mensagens</p>
-            </div>
+          {/* Main Content */}
+          <div className="lg:col-span-3 space-y-8">
+            {/* Accounts Section */}
+            <Card>
+              <CardHeader
+                title="Contas Instagram"
+                description="Gerencie suas contas conectadas"
+              />
+              <CardBody>
+                <AccountsManager
+                  accounts={initialAccounts}
+                  onConnect={handleConnectAccount}
+                  onDisconnect={handleDisconnectAccount}
+                  isLoading={connectingAccount}
+                />
+              </CardBody>
+            </Card>
 
-            <form onSubmit={create} className="space-y-6">
-              <Tabs
-                items={[
-                  { id: "basico", label: "Básico", icon: "📋" },
-                  { id: "gatilhos", label: "Gatilhos", icon: "🎯" },
-                  { id: "deteccao", label: "Detecção", icon: "🔍" },
-                  { id: "midia", label: "Mídia", icon: "🖼️" },
-                  { id: "respostas", label: "Respostas", icon: "💬" },
-                  { id: "links", label: "Links", icon: "🔗" },
-                ]}
-              >
-                {/* Aba 1: Básico */}
-                <div className="space-y-4">
-                  <FormSection title="Selecione a Conta" description="Escolha qual conta do Instagram usará esta automação">
-                    <AccountSelector
-                      accounts={initialAccounts}
-                      selectedAccountId={form.account_id}
-                      onChange={(accountId) => setForm({ ...form, account_id: accountId })}
-                    />
-                  </FormSection>
-
-                  <FormSection title="Informações Básicas" description="Configure o nome e status da automação">
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Nome da Automação
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        placeholder="Ex: Link do Produto X"
-                        className="w-full rounded-lg px-3 py-2.5 text-sm"
-                      />
+            {/* Form Section */}
+            <Card>
+              <CardHeader
+                title="Criar Nova Automação"
+                description="Configure uma automação para responder automaticamente mensagens"
+              />
+              <CardBody>
+                <form onSubmit={create} className="space-y-6">
+                  {message && (
+                    <div
+                      className={`p-4 rounded-lg text-sm ${
+                        message.includes("Erro")
+                          ? "bg-[var(--error)]/10 text-[var(--error)]"
+                          : "bg-[var(--success)]/10 text-[var(--success)]"
+                      }`}
+                    >
+                      {message}
                     </div>
-                  </FormSection>
+                  )}
 
-                  <FormSection title="Status" description="Ative ou pause esta automação">
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setForm({ ...form, active: true })}
-                        className={`py-3 px-4 rounded-lg font-semibold text-sm transition-colors ${
-                          form.active
-                            ? "bg-violet-600 text-white border-2 border-violet-500"
-                            : "bg-zinc-800 text-zinc-300 border-2 border-zinc-700"
-                        }`}
-                      >
-                        ✓ Ativa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setForm({ ...form, active: false })}
-                        className={`py-3 px-4 rounded-lg font-semibold text-sm transition-colors ${
-                          !form.active
-                            ? "bg-zinc-700 text-white border-2 border-zinc-600"
-                            : "bg-zinc-800 text-zinc-300 border-2 border-zinc-700"
-                        }`}
-                      >
-                        ⊘ Pausada
-                      </button>
-                    </div>
-                  </FormSection>
-                </div>
-
-                {/* Aba 2: Gatilhos */}
-                <div className="space-y-4">
-                  <FormSection
-                    title="Onde a automação vai funcionar?"
-                    description="Selecione um ou mais gatilhos"
+                  <Tabs
+                    items={[
+                      { id: "basico", label: "Básico", icon: "📋" },
+                      { id: "gatilhos", label: "Gatilhos", icon: "🎯" },
+                      { id: "deteccao", label: "Detecção", icon: "🔍" },
+                      { id: "midia", label: "Mídia", icon: "🖼️" },
+                      { id: "respostas", label: "Respostas", icon: "💬" },
+                      { id: "links", label: "Links", icon: "🔗" },
+                    ]}
                   >
-                    <TriggerSelector
-                      options={triggerOptions}
-                      selected={form.triggers}
-                      onChange={(triggers) => setForm({ ...form, triggers })}
-                    />
-                  </FormSection>
-                </div>
+                    {/* Aba 1: Básico */}
+                    <div className="space-y-6">
+                      <FormSection title="Selecione a Conta" description="Escolha qual conta do Instagram usará esta automação">
+                        <AccountSelector
+                          accounts={initialAccounts}
+                          selectedAccountId={form.account_id}
+                          onChange={(accountId) => setForm({ ...form, account_id: accountId })}
+                        />
+                      </FormSection>
 
-                {/* Aba 3: Detecção */}
-                <div className="space-y-4">
-                  <FormSection title="Como detectar a mensagem?" description="Configure palavras-chave e tipo de correspondência">
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Tipo de Correspondência
-                      </label>
-                      <select
-                        value={form.match_type}
-                        onChange={(e) => setForm({ ...form, match_type: e.target.value })}
-                        className="w-full rounded-lg px-3 py-2.5 text-sm"
-                      >
-                        <option value="contains">Contém qualquer uma das palavras-chave</option>
-                        <option value="exact">Exato - precisa ser exatamente igual</option>
-                        <option value="any">Qualquer mensagem (sem filtro)</option>
-                      </select>
-                    </div>
+                      <FormSection title="Informações Básicas" description="Configure o nome da automação">
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Nome da Automação
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            placeholder="Ex: Link do Produto X"
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          />
+                        </div>
+                      </FormSection>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Palavras-chave (separadas por vírgula)
-                      </label>
-                      <input
-                        type="text"
-                        value={form.keywordsText}
-                        onChange={(e) => setForm({ ...form, keywordsText: e.target.value })}
-                        placeholder="link, quero, promoção"
-                        className="w-full rounded-lg px-3 py-2.5 text-sm"
-                      />
-                      <p className="text-xs text-zinc-400 mt-2">Deixe em branco para responder a qualquer mensagem</p>
-                    </div>
-                  </FormSection>
-                </div>
-
-                {/* Aba 4: Mídia */}
-                <div className="space-y-4">
-                  <FormSection
-                    title="Post ou Reels Específico"
-                    description="Deixe sem seleção para funcionar em todas as mídias"
-                  >
-                    <div className="flex justify-between items-center gap-3 mb-4">
-                      <p className="text-sm text-zinc-400">
-                        {form.media_id ? `Mídia selecionada (ID: ${form.media_id})` : "Nenhuma mídia selecionada"}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={loadMedia}
-                        disabled={!connected || loadingMedia}
-                        className="rounded-lg border border-violet-500 text-violet-400 px-4 py-2 text-sm font-medium hover:bg-violet-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {loadingMedia ? "Carregando..." : "Carregar posts"}
-                      </button>
-                    </div>
-
-                    {form.media_id && (
-                      <button
-                        type="button"
-                        onClick={() => setForm({ ...form, media_id: "" })}
-                        className="text-xs text-violet-400 hover:text-violet-300 mb-3"
-                      >
-                        ✕ Limpar seleção
-                      </button>
-                    )}
-
-                    {media.length > 0 && (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-80 overflow-y-auto mb-4">
-                        {media.map((item) => (
+                      <FormSection title="Status" description="Ative ou pause esta automação">
+                        <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
-                            key={item.id}
-                            onClick={() => setForm({ ...form, media_id: item.id })}
-                            className={`rounded-lg border-2 overflow-hidden transition-all ${
-                              form.media_id === item.id
-                                ? "border-violet-500"
-                                : "border-zinc-700 hover:border-zinc-600"
+                            onClick={() => setForm({ ...form, active: true })}
+                            className={`py-3 px-4 rounded-lg font-medium text-sm transition-all border-2 ${
+                              form.active
+                                ? "border-[var(--accent-primary)] bg-[var(--accent-light)] text-[var(--accent-dark)]"
+                                : "border-[var(--border-base)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
                             }`}
                           >
-                            {item.thumbnail_url || item.media_url ? (
-                              <img
-                                src={item.thumbnail_url || item.media_url}
-                                alt="Mídia"
-                                className="aspect-square w-full object-cover"
-                              />
-                            ) : (
-                              <div className="aspect-square bg-zinc-800 flex items-center justify-center text-xs text-zinc-500">
-                                Sem miniatura
-                              </div>
-                            )}
-                            <p className="line-clamp-1 p-2 text-xs text-zinc-400 bg-zinc-900">
-                              {item.caption || item.media_type}
-                            </p>
+                            ✓ Ativa
                           </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <input
-                      type="text"
-                      value={form.media_id}
-                      onChange={(e) => setForm({ ...form, media_id: e.target.value })}
-                      placeholder="Ou cole manualmente o ID da mídia"
-                      className="w-full rounded-lg px-3 py-2.5 text-sm"
-                    />
-                  </FormSection>
-                </div>
-
-                {/* Aba 5: Respostas */}
-                <div className="space-y-4">
-                  <FormSection title="Resposta Pública" description="Comentário que será postado no seu post">
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Respostas públicas (uma por linha)
-                      </label>
-                      <textarea
-                        value={form.publicRepliesText}
-                        onChange={(e) => setForm({ ...form, publicRepliesText: e.target.value })}
-                        placeholder={"Enviei na sua DM 😊\nDá uma olhada nas mensagens!"}
-                        className="w-full rounded-lg px-3 py-2.5 text-sm min-h-24"
-                      />
-                    </div>
-                  </FormSection>
-
-                  <FormSection title="Mensagem Direta" description="DM de boas-vindas que será enviada">
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        DM de Boas-vindas
-                      </label>
-                      <textarea
-                        required
-                        value={form.welcome_dm}
-                        onChange={(e) => setForm({ ...form, welcome_dm: e.target.value })}
-                        className="w-full rounded-lg px-3 py-2.5 text-sm min-h-24"
-                      />
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, active: false })}
+                            className={`py-3 px-4 rounded-lg font-medium text-sm transition-all border-2 ${
+                              !form.active
+                                ? "border-[var(--error)] bg-[var(--error)]/10 text-[var(--error)]"
+                                : "border-[var(--border-base)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
+                            }`}
+                          >
+                            ⊘ Pausada
+                          </button>
+                        </div>
+                      </FormSection>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Texto do Botão (até 20 caracteres)
-                      </label>
-                      <input
-                        type="text"
-                        value={form.quick_reply_label}
-                        onChange={(e) => setForm({ ...form, quick_reply_label: e.target.value })}
-                        maxLength={20}
-                        placeholder="Ex: Quero o link"
-                        className="w-full rounded-lg px-3 py-2.5 text-sm"
-                      />
-                    </div>
-                  </FormSection>
-
-                  <MessagePreview
-                    type="welcome"
-                    message={form.welcome_dm}
-                    buttonLabel={form.quick_reply_label}
-                  />
-                </div>
-
-                {/* Aba 6: Links */}
-                <div className="space-y-4">
-                  <FormSection title="Mensagem com Link" description="Texto e link que será enviado após a resposta rápida">
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Texto Antes do Link
-                      </label>
-                      <textarea
-                        value={form.link_text}
-                        onChange={(e) => setForm({ ...form, link_text: e.target.value })}
-                        placeholder="Ex: Aqui está o link que você pediu:"
-                        className="w-full rounded-lg px-3 py-2.5 text-sm min-h-20"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                          Texto do Botão (até 20 caracteres)
-                        </label>
-                        <input
-                          type="text"
-                          value={form.link_button_label}
-                          onChange={(e) => setForm({ ...form, link_button_label: e.target.value })}
-                          maxLength={20}
-                          placeholder="Ex: Abrir link"
-                          className="w-full rounded-lg px-3 py-2.5 text-sm"
+                    {/* Aba 2: Gatilhos */}
+                    <div className="space-y-6">
+                      <FormSection
+                        title="Onde a automação vai funcionar?"
+                        description="Selecione um ou mais gatilhos"
+                      >
+                        <TriggerSelector
+                          options={triggerOptions}
+                          selected={form.triggers}
+                          onChange={(triggers) => setForm({ ...form, triggers })}
                         />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                          URL
-                        </label>
-                        <input
-                          type="url"
-                          value={form.link_url}
-                          onChange={(e) => setForm({ ...form, link_url: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full rounded-lg px-3 py-2.5 text-sm"
-                        />
-                      </div>
+                      </FormSection>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Atraso do Link (em segundos)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={86400}
-                        value={form.link_delay_seconds}
-                        onChange={(e) => setForm({ ...form, link_delay_seconds: Number(e.target.value) })}
-                        className="w-full rounded-lg px-3 py-2.5 text-sm"
-                      />
-                      <p className="text-xs text-zinc-400 mt-2">Quantos segundos aguardar após o usuário clicar no botão</p>
-                    </div>
-                  </FormSection>
+                    {/* Aba 3: Detecção */}
+                    <div className="space-y-6">
+                      <FormSection title="Como detectar a mensagem?" description="Configure palavras-chave">
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Tipo de Correspondência
+                          </label>
+                          <select
+                            value={form.match_type}
+                            onChange={(e) => setForm({ ...form, match_type: e.target.value })}
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          >
+                            <option value="contains">Contém qualquer uma das palavras-chave</option>
+                            <option value="exact">Exatamente</option>
+                            <option value="not_contains">Não contém</option>
+                            <option value="regex">Expressão Regular</option>
+                          </select>
+                        </div>
 
-                  <FormSection title="Mensagem com Link" description="Visualize como ficará a mensagem com o link">
-                    <MessagePreview
-                      type="link"
-                      message={form.link_text || "Aqui está o link que você pediu:"}
-                      linkButtonLabel={form.link_button_label}
-                      linkUrl={form.link_url}
-                    />
-                  </FormSection>
-
-                  <FormSection title="Lembrete (Opcional)" description="Enviar uma segunda mensagem dias depois">
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Texto do Lembrete
-                      </label>
-                      <textarea
-                        value={form.reminder_text}
-                        onChange={(e) => setForm({ ...form, reminder_text: e.target.value })}
-                        placeholder="Ex: Passando para lembrar do link que enviei 😊"
-                        className="w-full rounded-lg px-3 py-2.5 text-sm min-h-20"
-                      />
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Palavras-chave (separadas por vírgula)
+                          </label>
+                          <textarea
+                            value={form.keywordsText}
+                            onChange={(e) => setForm({ ...form, keywordsText: e.target.value })}
+                            placeholder="Ex: link, produto, preço"
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)] min-h-24"
+                          />
+                          <p className="text-xs text-[var(--text-secondary)] mt-1">
+                            Digite as palavras que dispararão essa automação
+                          </p>
+                        </div>
+                      </FormSection>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-zinc-200 mb-2">
-                        Atraso do Lembrete (em segundos)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={86400}
-                        value={form.reminder_delay_seconds}
-                        onChange={(e) => setForm({ ...form, reminder_delay_seconds: Number(e.target.value) })}
-                        className="w-full rounded-lg px-3 py-2.5 text-sm"
-                      />
-                      <p className="text-xs text-zinc-400 mt-2">3600 = 1 hora, 86400 = 24 horas</p>
-                      {warning && <p className="text-xs text-amber-400 mt-2">⚠️ {warning}</p>}
+                    {/* Aba 4: Mídia */}
+                    <div className="space-y-6">
+                      <FormSection
+                        title="Filtrar por Post"
+                        description="Deixe em branco para responder a todos os posts"
+                      >
+                        <button
+                          type="button"
+                          onClick={loadMedia}
+                          disabled={loadingMedia}
+                          className="px-4 py-2 text-sm font-medium bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors border border-[var(--border-base)]"
+                        >
+                          {loadingMedia ? "Carregando..." : "Carregar Posts"}
+                        </button>
+
+                        {media.length > 0 && (
+                          <div className="mt-4">
+                            <select
+                              value={form.media_id}
+                              onChange={(e) => setForm({ ...form, media_id: e.target.value })}
+                              className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                            >
+                              <option value="">Selecione um post...</option>
+                              {media.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.caption?.substring(0, 50) || "Post sem legenda"}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </FormSection>
                     </div>
-                  </FormSection>
 
-                  <MessagePreview
-                    type="reminder"
-                    message={form.reminder_text || "Passando para lembrar do link que enviei 😊"}
-                  />
-                </div>
-              </Tabs>
+                    {/* Aba 5: Respostas */}
+                    <div className="space-y-6">
+                      <FormSection title="Mensagem no DM" description="Esta mensagem será enviada como mensagem privada">
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Texto da Mensagem
+                          </label>
+                          <textarea
+                            value={form.welcome_dm}
+                            onChange={(e) => setForm({ ...form, welcome_dm: e.target.value })}
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)] min-h-24"
+                          />
+                        </div>
 
-              <div className="flex gap-3 mt-8">
-                <button
-                  type="submit"
-                  disabled={saving || !form.account_id}
-                  className="px-6 py-3 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? "Salvando..." : "Criar Automação"}
-                </button>
-              </div>
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Label do Botão
+                          </label>
+                          <input
+                            type="text"
+                            value={form.quick_reply_label}
+                            onChange={(e) => setForm({ ...form, quick_reply_label: e.target.value })}
+                            placeholder="Ex: Quero o link"
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          />
+                        </div>
 
-              {message && (
-                <div
-                  className={`rounded-lg px-4 py-3 text-sm font-medium mt-4 ${
-                    message.includes("Não foi possível")
-                      ? "bg-red-500/10 text-red-300 border border-red-500/20"
-                      : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
-                  }`}
-                >
-                  {message}
-                </div>
-              )}
-            </form>
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Respostas em Comentário (uma por linha)
+                          </label>
+                          <textarea
+                            value={form.publicRepliesText}
+                            onChange={(e) => setForm({ ...form, publicRepliesText: e.target.value })}
+                            placeholder="Ex: Enviando o link no DM!"
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)] min-h-20"
+                          />
+                        </div>
+                      </FormSection>
 
-            <footer className="mt-12 pt-8 border-t border-zinc-700 text-xs text-zinc-500 flex gap-4">
-              <a href="/privacidade" className="hover:text-zinc-400 transition-colors">
-                Privacidade
-              </a>
-              <a href="/exclusao-de-dados" className="hover:text-zinc-400 transition-colors">
-                Exclusão de dados
-              </a>
-            </footer>
+                      {form.quick_reply_label && (
+                        <MessagePreview type="welcome" message={form.welcome_dm} buttonLabel={form.quick_reply_label} />
+                      )}
+                    </div>
+
+                    {/* Aba 6: Links */}
+                    <div className="space-y-6">
+                      <FormSection
+                        title="Link para Enviar"
+                        description="Configure o link que será enviado quando solicitado"
+                      >
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            URL
+                          </label>
+                          <input
+                            type="url"
+                            value={form.link_url}
+                            onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+                            placeholder="https://..."
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          />
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Texto antes do Link
+                          </label>
+                          <textarea
+                            value={form.link_text}
+                            onChange={(e) => setForm({ ...form, link_text: e.target.value })}
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)] min-h-16"
+                          />
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Label do Botão do Link
+                          </label>
+                          <input
+                            type="text"
+                            value={form.link_button_label}
+                            onChange={(e) => setForm({ ...form, link_button_label: e.target.value })}
+                            placeholder="Ex: Abrir"
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          />
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Delay antes de enviar (segundos)
+                          </label>
+                          <input
+                            type="number"
+                            value={form.link_delay_seconds}
+                            onChange={(e) => setForm({ ...form, link_delay_seconds: Number(e.target.value) })}
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          />
+                        </div>
+                      </FormSection>
+
+                      <FormSection
+                        title="Lembrete"
+                        description="Enviar um lembrete após alguns segundos"
+                      >
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Texto do Lembrete
+                          </label>
+                          <textarea
+                            value={form.reminder_text}
+                            onChange={(e) => setForm({ ...form, reminder_text: e.target.value })}
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)] min-h-20"
+                          />
+                          <p className="text-xs text-[var(--text-secondary)] mt-1">
+                            Deixe em branco para desativar lembretes
+                          </p>
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Delay do Lembrete (segundos)
+                          </label>
+                          <input
+                            type="number"
+                            value={form.reminder_delay_seconds}
+                            onChange={(e) => setForm({ ...form, reminder_delay_seconds: Number(e.target.value) })}
+                            className="w-full rounded-lg px-3 py-2.5 text-sm border border-[var(--border-base)]"
+                          />
+                          {warning && (
+                            <p className="text-xs text-[var(--warning)] mt-1">⚠️ {warning}</p>
+                          )}
+                        </div>
+                      </FormSection>
+                    </div>
+                  </Tabs>
+
+                  {/* Form Actions */}
+                  <div className="flex gap-3 pt-4 border-t border-[var(--border-subtle)]">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={saving || !form.name}
+                      isLoading={saving}
+                    >
+                      Salvar Automação
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setForm(blank)}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </form>
+              </CardBody>
+            </Card>
           </div>
         </div>
       </main>
