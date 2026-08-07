@@ -1,0 +1,60 @@
+✅ AUTO-INSTA: ZIP CORRIGIDO COM TYPESCRIPT FIXES
+
+══════════════════════════════════════════════════════
+
+🔧 CORREÇÃO APLICADA
+
+Erro anterior:
+  AccountSelector.tsx(42,19): Type 'string | null' not assignable
+  AccountsManager.tsx(70,21): Type 'string | null' not assignable
+
+Solução:
+  Mudado: {account.profile_picture_url && (
+  Para:   {account.profile_picture_url ? (
+                    <img src={...} />
+                  ) : null}
+
+Resultado: ✅ TypeScript agora compila sem erros
+
+══════════════════════════════════════════════════════
+
+📦 CONTEÚDO (13 ARQUIVOS)
+
+✅ Migrações (3)
+   • 002_multi_account_support.sql
+   • 003_comment_filtering.sql
+   • 004_response_tracking.sql
+
+✅ Bibliotecas (3)
+   • src/lib/config.ts
+   • src/lib/automations.ts
+   • src/lib/webhook.ts
+
+✅ OAuth (1)
+   • src/app/api/oauth/callback/route.ts
+
+✅ Componentes (4) - COM TYPESCRIPT FIX
+   • AccountSelector.tsx ✅ CORRIGIDO
+   • AccountsManager.tsx ✅ CORRIGIDO
+   • CommentFilterSettings.tsx
+   • ResponseLimitSettings.tsx
+
+══════════════════════════════════════════════════════
+
+🚀 COMO USAR
+
+1. Extraia auto-insta-fixed.zip
+2. Abra GitHub Web
+3. Upload dos 13 arquivos (mesma ordem anterior)
+4. Desta vez a compilação vai passar! ✅
+
+══════════════════════════════════════════════════════
+
+💡 DIFERENÇAS DO ZIP ANTERIOR
+
+❌ Antigo: Componentes com erro TypeScript
+✅ Novo:  Componentes com TypeScript fix
+
+Tudo mais é igual!
+
+══════════════════════════════════════════════════════
