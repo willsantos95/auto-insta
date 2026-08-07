@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exchangeLongToken, exchangeShortToken, fetchMyProfile, subscribeAccount } from "@/lib/meta";
-import { saveInstagramConnection, saveInstagramAccount } from "@/lib/config";
+import { saveInstagramConnection, saveInstagramAccount, setOwnerUserId } from "@/lib/config";
 import { env } from "@/lib/env";
 
 function painelRedirect(message: string) {
@@ -55,6 +55,9 @@ export async function GET(request: Request) {
       name: profile.name,
       profilePictureUrl: profile.profile_picture_url,
     });
+
+    // Define este usuário como dono (filtro para comentários)
+    await setOwnerUserId(profile.user_id);
 
     const response = NextResponse.redirect(`${env.APP_URL.replace(/\/$/, "")}/painel?connected=1`);
     response.cookies.delete("ig_oauth_state");

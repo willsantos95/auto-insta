@@ -36,13 +36,13 @@ export function AccountSelector({ accounts, selectedAccountId, onChange }: Accou
             }`}
           >
             <div className="flex items-start gap-3">
-              {account.profile_picture_url && (
+              {account.profile_picture_url ? (
                 <img
                   src={account.profile_picture_url}
                   alt={account.instagram_username}
                   className="w-10 h-10 rounded-full"
                 />
-              )}
+              ) : null}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-zinc-100">@{account.instagram_username}</p>
                 <p className="text-xs text-zinc-400">{account.instagram_name}</p>

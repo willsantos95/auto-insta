@@ -39,6 +39,25 @@ async function upsertContact(input: {
   );
 }
 
+// Novo: Verifica se já respondemos a esta pessoa com esta automação
+async function hasAlreadyResponded(userId: string, automationId: string): Promise<boolean> {
+  const result = await query<{ responded: boolean }>(
+    `SELECT $2::uuid = ANY(responded_automations) as responded FROM contacts WHERE instagram_user_id = $1`,
+    [userId, automationId],
+  );
+  return result.rows[0]?.responded ?? false;
+}
+
+// Novo: Marca que respondemos a esta pessoa com esta automação
+async function markAsResponded(userId: string, automationId: string) {
+  await query(
+    `UPDATE contacts
+     SET responded_automations = array_append(responded_automations, $2)
+     WHERE instagram_user_id = $1 AND NOT $2::uuid = ANY(responded_automations)`,
+    [userId, automationId],
+  );
+}
+
 async function recordEvent(input: {
   key: string;
   field: string;
@@ -78,23 +97,17 @@ async function queueWelcome(input: {
     quickReplyLabel: input.automation.quick_reply_label,
     quickReplyPayload: input.automation.quick_reply_label ? quickReplyPayload(input.automation.id) : null,
   };
+
   if (input.isPrivateReply && input.commentId) {
     const eventDate = input.eventTimestamp ? new Date(input.eventTimestamp * 1000) : new Date();
     const expiresAt = new Date(eventDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-    await enqueue({
-      dedupeKey: `comment:${input.commentId}:private:${input.automation.id}`,
-      automationId: input.automation.id,
-      eventId: input.eventId,
-      contactId: input.senderId,
-      kind: "private_reply",
-      commentId: input.commentId,
-      payload,
-      expiresAt,
-      bypassWindow: true,
-    });
 
-    if (input.automation.public_replies.length > 0) {
-      const selected = input.automation.public_replies[Math.floor(Math.random() * input.automation.public_replies.length)];
+    // Se prefer_public_reply é true, responde APENAS com comentário público
+    if (input.automation.prefer_public_reply) {
+      const replyText = input.automation.public_replies.length > 0
+        ? input.automation.public_replies[Math.floor(Math.random() * input.automation.public_replies.length)]
+        : input.automation.welcome_dm;
+
       await enqueue({
         dedupeKey: `comment:${input.commentId}:public:${input.automation.id}`,
         automationId: input.automation.id,
@@ -102,10 +115,38 @@ async function queueWelcome(input: {
         contactId: input.senderId,
         kind: "public_reply",
         commentId: input.commentId,
-        payload: { text: selected },
+        payload: { text: replyText },
         expiresAt,
         bypassWindow: true,
       });
+    } else {
+      // Comportamento padrão: responde com DM + comentário público (se configurado)
+      await enqueue({
+        dedupeKey: `comment:${input.commentId}:private:${input.automation.id}`,
+        automationId: input.automation.id,
+        eventId: input.eventId,
+        contactId: input.senderId,
+        kind: "private_reply",
+        commentId: input.commentId,
+        payload,
+        expiresAt,
+        bypassWindow: true,
+      });
+
+      if (input.automation.public_replies.length > 0) {
+        const selected = input.automation.public_replies[Math.floor(Math.random() * input.automation.public_replies.length)];
+        await enqueue({
+          dedupeKey: `comment:${input.commentId}:public:${input.automation.id}`,
+          automationId: input.automation.id,
+          eventId: input.eventId,
+          contactId: input.senderId,
+          kind: "public_reply",
+          commentId: input.commentId,
+          payload: { text: selected },
+          expiresAt,
+          bypassWindow: true,
+        });
+      }
     }
   } else {
     await enqueue({
@@ -159,6 +200,15 @@ async function processComment(accountId: string, value: any, timestamp?: number)
   const mediaId = value.media?.id ? String(value.media.id) : value.media_id ? String(value.media_id) : null;
   if (!commentId || !senderId || !text) return;
 
+  // ⚠️ Filtrar comentários do dono da conta
+  const configResult = await query<{ owner_instagram_user_id: string | null }>(
+    `SELECT owner_instagram_user_id FROM config WHERE id = 1`
+  );
+  const ownerUserId = configResult.rows[0]?.owner_instagram_user_id;
+  if (ownerUserId && senderId === ownerUserId) {
+    return; // Ignorar comentários do dono
+  }
+
   const key = eventKey(value, `comment:${commentId}`);
   const eventId = await recordEvent({
     key,
@@ -174,9 +224,27 @@ async function processComment(accountId: string, value: any, timestamp?: number)
 
   const automation = await findMatchingAutomation({ trigger: "comment", text, mediaId });
   await upsertContact({ userId: senderId, username, automationId: automation?.id });
+
   if (automation) {
-    await queueWelcome({ automation, eventId, accountId, senderId, commentId, isPrivateReply: true, eventTimestamp: timestamp });
+    let shouldRespond = true;
+
+    // Se a automação está configurada para responder apenas 1x, verificar
+    if (automation.respond_once_per_user) {
+      const alreadyResponded = await hasAlreadyResponded(senderId, automation.id);
+      if (alreadyResponded) {
+        shouldRespond = false;
+      }
+    }
+
+    if (shouldRespond) {
+      await queueWelcome({ automation, eventId, accountId, senderId, commentId, isPrivateReply: true, eventTimestamp: timestamp });
+      // Se está em modo 1x, marcar como respondido
+      if (automation.respond_once_per_user) {
+        await markAsResponded(senderId, automation.id);
+      }
+    }
   }
+
   await query(`UPDATE events SET processed_at=now() WHERE id=$1`, [eventId]);
 }
 

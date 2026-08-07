@@ -17,6 +17,8 @@ export const automationInputSchema = z.object({
   link_delay_seconds: z.number().int().min(0).max(86_400).default(0),
   reminder_text: z.string().max(1000).nullable().optional(),
   reminder_delay_seconds: z.number().int().min(0).max(86_400).nullable().optional(),
+  prefer_public_reply: z.boolean().default(false),
+  respond_once_per_user: z.boolean().default(false),
 });
 
 export type AutomationInput = z.infer<typeof automationInputSchema>;
@@ -65,8 +67,8 @@ export async function createAutomation(raw: unknown): Promise<Automation> {
       `INSERT INTO automations
         (name, active, triggers, keywords, match_type, media_id, public_replies,
          welcome_dm, quick_reply_label, link_text, link_button_label, link_url,
-         link_delay_seconds, reminder_text, reminder_delay_seconds)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+         link_delay_seconds, reminder_text, reminder_delay_seconds, prefer_public_reply, respond_once_per_user)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [
         input.name,
@@ -84,6 +86,8 @@ export async function createAutomation(raw: unknown): Promise<Automation> {
         input.link_delay_seconds,
         input.reminder_text ?? null,
         input.reminder_delay_seconds ?? null,
+        input.prefer_public_reply ?? false,
+        input.respond_once_per_user ?? false,
       ],
     );
     const automation = result.rows[0];
@@ -100,7 +104,7 @@ export async function updateAutomation(id: string, raw: unknown): Promise<Automa
          name=$2, active=$3, triggers=$4, keywords=$5, match_type=$6, media_id=$7,
          public_replies=$8, welcome_dm=$9, quick_reply_label=$10, link_text=$11,
          link_button_label=$12, link_url=$13, link_delay_seconds=$14,
-         reminder_text=$15, reminder_delay_seconds=$16, updated_at=now()
+         reminder_text=$15, reminder_delay_seconds=$16, prefer_public_reply=$17, respond_once_per_user=$18, updated_at=now()
        WHERE id=$1 RETURNING *`,
       [
         id,
@@ -119,6 +123,8 @@ export async function updateAutomation(id: string, raw: unknown): Promise<Automa
         input.link_delay_seconds,
         input.reminder_text ?? null,
         input.reminder_delay_seconds ?? null,
+        input.prefer_public_reply ?? false,
+        input.respond_once_per_user ?? false,
       ],
     );
     const automation = result.rows[0];

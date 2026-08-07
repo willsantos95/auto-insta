@@ -189,3 +189,19 @@ export async function updateAccessToken(accessToken: string, expiresAt: Date) {
     [encrypted.ciphertext, encrypted.iv, encrypted.tag, expiresAt],
   );
 }
+
+// Novo: Define o ID do dono da conta (para filtrar comentários)
+export async function setOwnerUserId(userId: string) {
+  await query(
+    `UPDATE config SET owner_instagram_user_id = $1, updated_at = now() WHERE id = 1`,
+    [userId],
+  );
+}
+
+// Novo: Obtém o ID do dono da conta
+export async function getOwnerUserId(): Promise<string | null> {
+  const result = await query<{ owner_instagram_user_id: string | null }>(
+    `SELECT owner_instagram_user_id FROM config WHERE id = 1`
+  );
+  return result.rows[0]?.owner_instagram_user_id ?? null;
+}

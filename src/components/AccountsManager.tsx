@@ -64,13 +64,13 @@ export function AccountsManager({ accounts, onConnect, onDisconnect, isLoading }
                 key={account.id}
                 className="flex items-center gap-4 p-4 rounded-lg border border-zinc-700 bg-zinc-900/50 hover:bg-zinc-900/70 transition-colors"
               >
-                {account.profile_picture_url && (
+                {account.profile_picture_url ? (
                   <img
                     src={account.profile_picture_url}
                     alt={account.instagram_username}
                     className="w-12 h-12 rounded-full"
                   />
-                )}
+                ) : null}
                 <div className="flex-1">
                   <p className="font-medium text-zinc-100">@{account.instagram_username}</p>
                   <p className="text-xs text-zinc-400">{account.instagram_name}</p>
