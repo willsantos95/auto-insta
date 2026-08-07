@@ -2,12 +2,12 @@ import { decryptToken, encryptToken } from "./crypto";
 import { query } from "./db";
 
 export type AppConfig = {
-  instagram_user_id: string | null;
-  instagram_username: string | null;
-  instagram_name: string | null;
-  profile_picture_url: string | null;
-  token_expires_at: Date | null;
-  connected_at: Date | null;
+  instagram_user_id: string | undefined;
+  instagram_username: string | undefined;
+  instagram_name: string | undefined;
+  profile_picture_url: string | undefined;
+  token_expires_at: Date | undefined;
+  connected_at: Date | undefined;
 };
 
 export type InstagramAccount = AppConfig & {
