@@ -1,25 +1,25 @@
-/* Light Mode - Paleta Corporativa */
+/* Light Mode - Instagram Inspired Design */
 :root {
-  /* Colors */
+  /* Colors - Instagram Clean Design */
   --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f0f0f0;
 
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
+  --text-primary: #000000;
+  --text-secondary: #65676b;
+  --text-tertiary: #a0a2a6;
 
-  --border-subtle: #e5e7eb;
-  --border-base: #d1d5db;
+  --border-subtle: #efefef;
+  --border-base: #e5e5e5;
 
-  --accent-primary: #0d9488;
-  --accent-light: #d1fae5;
-  --accent-dark: #0f766e;
+  --accent-primary: #0095f6;
+  --accent-light: #e7f5ff;
+  --accent-dark: #0a66c2;
 
-  --success: #10b981;
-  --warning: #fbbf24;
-  --error: #dc2626;
-  --info: #06b6d4;
+  --success: #31a24c;
+  --warning: #f02849;
+  --error: #f02849;
+  --info: #0095f6;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);

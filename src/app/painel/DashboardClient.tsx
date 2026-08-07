@@ -245,12 +245,12 @@ export default function DashboardClient({
       />
 
       <main className="mx-auto max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
           {/* Sidebar - Automações Existentes */}
           <aside className="lg:col-span-1">
-            <div className="sticky top-24 space-y-4">
+            <div className="sticky top-20 space-y-3">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-4">
+                <h2 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider mb-3 px-2">
                   Automações ({initialAutomations.length})
                 </h2>
 

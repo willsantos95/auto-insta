@@ -30,12 +30,12 @@ export function Card({ children, className = "", onClick }: CardProps) {
     <div
       onClick={onClick}
       className={`
-        rounded-lg
-        border border-[var(--border-subtle)]
+        rounded-xl
+        border border-[var(--border-base)]
         bg-[var(--bg-primary)]
         shadow-sm
         hover:shadow-md
-        transition-shadow
+        transition-all
         ${onClick ? "cursor-pointer" : ""}
         ${className}
       `}
@@ -47,9 +47,9 @@ export function Card({ children, className = "", onClick }: CardProps) {
 
 export function CardHeader({ title, description, children, className = "" }: CardHeaderProps) {
   return (
-    <div className={`border-b border-[var(--border-subtle)] px-6 py-4 ${className}`}>
+    <div className={`border-b border-[var(--border-subtle)] px-6 py-5 ${className}`}>
       {title && (
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
+        <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
           {title}
         </h3>
       )}
@@ -63,7 +63,7 @@ export function CardHeader({ title, description, children, className = "" }: Car
 
 export function CardBody({ children, className = "" }: CardBodyProps) {
   return (
-    <div className={`px-6 py-4 ${className}`}>
+    <div className={`px-6 py-5 ${className}`}>
       {children}
     </div>
   );
