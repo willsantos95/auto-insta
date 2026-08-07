@@ -79,9 +79,43 @@ export default function DashboardClient({
   }
 
   async function handleDisconnectAccount(accountId: string) {
-    if (!confirm("Desconectar esta conta?")) return;
-    // TODO: Implement account disconnection API
-    alert("Desconexão ainda não implementada. Use o script delete-account.sql");
+    const account = initialAccounts.find((a) => a.id === accountId);
+    const accountName = account ? `@${account.instagram_username}` : "esta conta";
+
+    if (
+      !confirm(
+        `Desconectar ${accountName}?\n\nIsso deletará qualquer automação associada a esta conta.`
+      )
+    ) {
+      return;
+    }
+
+    setConnectingAccount(true);
+    try {
+      const response = await fetch(`/api/accounts/${accountId}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(`❌ Erro: ${data.error}`);
+        setMessage(`Erro ao desconectar: ${data.error}`);
+      } else {
+        alert(
+          `✅ Sucesso!\n\n${data.message}`
+        );
+        setMessage(`${data.message}`);
+        router.refresh();
+      }
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Erro desconhecido";
+      alert(`❌ Erro: ${errorMsg}`);
+      setMessage(`Erro ao desconectar: ${errorMsg}`);
+    } finally {
+      setConnectingAccount(false);
+    }
   }
 
   async function create(event: FormEvent) {
@@ -181,12 +215,20 @@ export default function DashboardClient({
               <p className="text-xs font-bold text-violet-400 uppercase tracking-wider">Instagram Auto</p>
               <h1 className="text-2xl font-bold text-zinc-100">Painel de Automações</h1>
             </div>
-            <a
-              href="/api/oauth/start"
-              className="rounded-lg bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              + Conectar Nova Conta
-            </a>
+            <div className="flex gap-3">
+              <a
+                href="/painel/analytics"
+                className="rounded-lg bg-cyan-600 px-5 py-3 font-semibold text-white hover:bg-cyan-500 transition-colors"
+              >
+                📊 Analytics
+              </a>
+              <a
+                href="/api/oauth/start"
+                className="rounded-lg bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                + Conectar Nova Conta
+              </a>
+            </div>
           </div>
 
           {/* Accounts Manager */}
