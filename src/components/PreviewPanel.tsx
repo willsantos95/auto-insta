@@ -12,24 +12,24 @@ export function PreviewPanel({
   buttonText = "Abrir",
 }: PreviewPanelProps) {
   return (
-    <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6">
+    <div className="rounded-xl border border-[var(--border-base)] bg-[var(--bg-secondary)] p-6">
       <div className="mb-4">
-        <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">{title}</h3>
-        <p className="text-xs text-zinc-400">Assim o usuário verá a resposta:</p>
+        <h3 className="text-xs font-bold text-[var(--accent-primary)] uppercase tracking-wider mb-2">{title}</h3>
+        <p className="text-xs text-[var(--text-secondary)]">Assim o usuário verá a resposta:</p>
       </div>
 
-      <div className="bg-zinc-950 border-l-4 border-cyan-500 rounded-lg p-4 space-y-3">
-        <p className="text-sm text-zinc-100 leading-relaxed">{message}</p>
+      <div className="bg-[var(--bg-tertiary)] border-l-4 border-[var(--accent-primary)] rounded-lg p-4 space-y-3">
+        <p className="text-sm text-[var(--text-primary)] leading-relaxed">{message}</p>
 
         {buttonLabel && (
-          <button className="inline-block bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-cyan-600 transition-colors">
+          <button className="inline-block bg-[var(--accent-primary)] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[var(--accent-dark)] transition-colors">
             👉 {buttonLabel}
           </button>
         )}
       </div>
 
       {buttonText && (
-        <p className="text-xs text-zinc-500 mt-3">
+        <p className="text-xs text-[var(--text-tertiary)] mt-3">
           Depois de {buttonText}, será enviado o link após o atraso configurado.
         </p>
       )}

@@ -31,13 +31,13 @@ export function TriggerSelector({ options, selected, onChange }: TriggerSelector
           onClick={() => toggle(option.id)}
           className={`rounded-lg border-2 p-4 text-center transition-all ${
             selected.includes(option.id)
-              ? "border-violet-500 bg-violet-500/10"
-              : "border-zinc-700 bg-zinc-900 hover:border-zinc-600"
+              ? "border-[var(--accent-primary)] bg-[var(--accent-light)]"
+              : "border-[var(--border-base)] bg-[var(--bg-secondary)] hover:border-[var(--border-subtle)]"
           }`}
         >
           <div className="text-2xl mb-2">{option.icon}</div>
-          <div className="text-sm font-semibold text-zinc-100">{option.label}</div>
-          <div className="text-xs text-zinc-400 mt-1">{option.description}</div>
+          <div className="text-sm font-semibold text-[var(--text-primary)]">{option.label}</div>
+          <div className="text-xs text-[var(--text-secondary)] mt-1">{option.description}</div>
         </button>
       ))}
     </div>
