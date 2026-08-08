@@ -92,8 +92,9 @@ async function queueWelcome(input: {
   isPrivateReply: boolean;
   eventTimestamp?: number;
 }) {
+  const welcomeDmText = input.automation.welcome_dm?.trim() || "";
   const payload = {
-    text: input.automation.welcome_dm,
+    text: welcomeDmText,
     quickReplyLabel: input.automation.quick_reply_label,
     quickReplyPayload: input.automation.quick_reply_label ? quickReplyPayload(input.automation.id) : null,
   };
@@ -106,32 +107,38 @@ async function queueWelcome(input: {
     if (input.automation.prefer_public_reply) {
       const replyText = input.automation.public_replies.length > 0
         ? input.automation.public_replies[Math.floor(Math.random() * input.automation.public_replies.length)]
-        : input.automation.welcome_dm;
+        : welcomeDmText;
 
-      await enqueue({
-        dedupeKey: `comment:${input.commentId}:public:${input.automation.id}`,
-        automationId: input.automation.id,
-        eventId: input.eventId,
-        contactId: input.senderId,
-        kind: "public_reply",
-        commentId: input.commentId,
-        payload: { text: replyText },
-        expiresAt,
-        bypassWindow: true,
-      });
+      // Só envia se houver texto
+      if (replyText) {
+        await enqueue({
+          dedupeKey: `comment:${input.commentId}:public:${input.automation.id}`,
+          automationId: input.automation.id,
+          eventId: input.eventId,
+          contactId: input.senderId,
+          kind: "public_reply",
+          commentId: input.commentId,
+          payload: { text: replyText },
+          expiresAt,
+          bypassWindow: true,
+        });
+      }
     } else {
       // Comportamento padrão: responde com DM + comentário público (se configurado)
-      await enqueue({
-        dedupeKey: `comment:${input.commentId}:private:${input.automation.id}`,
-        automationId: input.automation.id,
-        eventId: input.eventId,
-        contactId: input.senderId,
-        kind: "private_reply",
-        commentId: input.commentId,
-        payload,
-        expiresAt,
-        bypassWindow: true,
-      });
+      // Só envia private_reply se welcome_dm tiver conteúdo
+      if (welcomeDmText) {
+        await enqueue({
+          dedupeKey: `comment:${input.commentId}:private:${input.automation.id}`,
+          automationId: input.automation.id,
+          eventId: input.eventId,
+          contactId: input.senderId,
+          kind: "private_reply",
+          commentId: input.commentId,
+          payload,
+          expiresAt,
+          bypassWindow: true,
+        });
+      }
 
       if (input.automation.public_replies.length > 0) {
         const selected = input.automation.public_replies[Math.floor(Math.random() * input.automation.public_replies.length)];
@@ -149,16 +156,19 @@ async function queueWelcome(input: {
       }
     }
   } else {
-    await enqueue({
-      dedupeKey: `event:${input.eventId}:welcome:${input.automation.id}`,
-      automationId: input.automation.id,
-      eventId: input.eventId,
-      contactId: input.senderId,
-      recipientId: input.senderId,
-      kind: input.automation.quick_reply_label ? "dm_quick_reply" : "dm_text",
-      payload,
-      windowRequired: true,
-    });
+    // Só envia DM se welcome_dm tiver conteúdo
+    if (welcomeDmText) {
+      await enqueue({
+        dedupeKey: `event:${input.eventId}:welcome:${input.automation.id}`,
+        automationId: input.automation.id,
+        eventId: input.eventId,
+        contactId: input.senderId,
+        recipientId: input.senderId,
+        kind: input.automation.quick_reply_label ? "dm_quick_reply" : "dm_text",
+        payload,
+        windowRequired: true,
+      });
+    }
   }
 }
 

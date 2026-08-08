@@ -9,7 +9,7 @@ export const automationInputSchema = z.object({
   match_type: z.enum(["contains", "exact", "any"]),
   media_id: z.string().nullable().optional(),
   public_replies: z.array(z.string().trim().min(1)).default([]),
-  welcome_dm: z.string().min(1).max(1000),
+  welcome_dm: z.string().max(1000).nullable().optional(),
   quick_reply_label: z.string().max(20).nullable().optional(),
   link_text: z.string().max(1000).nullable().optional(),
   link_button_label: z.string().max(20).nullable().optional(),

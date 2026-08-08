@@ -210,10 +210,10 @@ async function fail(item: QueueItem, error: unknown, forceFailure = false) {
 
 function isUnrecoverableError(error: unknown): boolean {
   if (!(error instanceof MetaError)) return false;
-  // Error 131/2534025: Invalid comment for private reply (will be converted to public reply)
-  if (error.code === 131 && error.subcode === 2534025) return false; // Recoverable via conversion
-  // Error 132/136 subcode 33: Object doesn't exist (deleted post/comment)
-  if ((error.code === 132 || error.code === 136) && error.subcode === 33) return true;
+  // Subcode 2534025: Invalid comment for private reply (will be converted to public reply)
+  if (error.subcode === 2534025) return false; // Recoverable via conversion
+  // Subcode 33: Object doesn't exist (deleted post/comment)
+  if (error.subcode === 33) return true;
   // Error 190: Invalid OAuth token
   if (error.code === 190) return true;
   // Error 200: Permissions error
@@ -287,8 +287,8 @@ export async function processOne(): Promise<boolean> {
       console.error(`Falha ao enviar item ${item.id}:`, error);
 
       // Handle specific Meta API errors
-      if (error instanceof MetaError && error.code === 131 && error.subcode === 2534025) {
-        // Error 131/2534025: Invalid comment for private reply
+      if (error instanceof MetaError && error.subcode === 2534025) {
+        // Subcode 2534025: Invalid comment for private reply
         // Try to convert to public reply if available
         const converted = await convertPrivateReplyToPublic(item);
         if (converted) {
