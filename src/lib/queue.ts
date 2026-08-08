@@ -2,7 +2,7 @@ import os from "node:os";
 import { env } from "./env";
 import { pool, query, transaction } from "./db";
 import { getPublicConfig } from "./config";
-import { sendButtonMessage, sendDirectMessage, sendPrivateReply, sendPublicReply } from "./meta";
+import { sendButtonMessage, sendDirectMessage, sendPrivateReply, sendPublicReply, MetaError } from "./meta";
 
 export type QueueItem = {
   id: number;
@@ -184,10 +184,20 @@ async function finalize(item: QueueItem, response: unknown) {
   );
 }
 
-async function fail(item: QueueItem, error: unknown) {
+async function fail(item: QueueItem, error: unknown, forceFailure = false) {
   const reason = error instanceof Error ? error.message : String(error);
-  const finalFailure = item.attempts >= item.max_attempts;
+  const isUnrecoverable = forceFailure || isUnrecoverableError(error);
+  const finalFailure = isUnrecoverable || item.attempts >= item.max_attempts;
   const retryDelay = Math.min(300, 2 ** Math.max(1, item.attempts));
+
+  if (error instanceof MetaError) {
+    const automationInfo = item.automation_id ? ` (automation: ${item.automation_id})` : "";
+    console.log(
+      `Meta error code ${error.code}/subcode ${error.subcode}${automationInfo}: ${error.metaMessage}\n` +
+      `Message kind: ${item.kind}, attempts: ${item.attempts}/${item.max_attempts}, final: ${finalFailure}`,
+    );
+  }
+
   await query(
     `UPDATE queue
         SET status=$2,
@@ -196,6 +206,51 @@ async function fail(item: QueueItem, error: unknown) {
       WHERE id=$1`,
     [item.id, finalFailure ? "failed" : "pending", retryDelay, reason.slice(0, 4000)],
   );
+}
+
+function isUnrecoverableError(error: unknown): boolean {
+  if (!(error instanceof MetaError)) return false;
+  // Error 131/2534025: Invalid comment for private reply (will be converted to public reply)
+  if (error.code === 131 && error.subcode === 2534025) return false; // Recoverable via conversion
+  // Error 132/136 subcode 33: Object doesn't exist (deleted post/comment)
+  if ((error.code === 132 || error.code === 136) && error.subcode === 33) return true;
+  // Error 190: Invalid OAuth token
+  if (error.code === 190) return true;
+  // Error 200: Permissions error
+  if (error.code === 200) return true;
+  return false;
+}
+
+async function convertPrivateReplyToPublic(item: QueueItem) {
+  if (item.kind !== "private_reply" || !item.comment_id) return false;
+
+  // Try to get the public replies text from the automation's config
+  const result = await query<{ public_replies: string[]; name: string }>(
+    `SELECT name, public_replies FROM automations WHERE id = $1`,
+    [item.automation_id],
+  );
+
+  const automation = result.rows[0];
+  if (!automation) {
+    console.log(`Automation ${item.automation_id} not found for conversion of item ${item.id}`);
+    return false;
+  }
+
+  const publicReplies = automation.public_replies || [];
+  if (publicReplies.length === 0) {
+    console.log(`Cannot convert item ${item.id} (automation: "${automation.name}"): no public replies configured`);
+    return false;
+  }
+
+  const selectedReply = publicReplies[Math.floor(Math.random() * publicReplies.length)];
+
+  await query(
+    `UPDATE queue SET kind='public_reply', payload=$2, updated_at=now() WHERE id=$1`,
+    [item.id, JSON.stringify({ text: selectedReply })],
+  );
+
+  console.log(`Item ${item.id} (automation: "${automation.name}") converted from private_reply to public_reply due to invalid comment type`);
+  return true;
 }
 
 export async function processOne(): Promise<boolean> {
@@ -222,7 +277,7 @@ export async function processOne(): Promise<boolean> {
       if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
     }
 
-    const item = await claimNext();
+    let item = await claimNext();
     if (!item) return false;
     try {
       if (!(await validateWindow(item))) return true;
@@ -230,6 +285,22 @@ export async function processOne(): Promise<boolean> {
       await finalize(item, response);
     } catch (error) {
       console.error(`Falha ao enviar item ${item.id}:`, error);
+
+      // Handle specific Meta API errors
+      if (error instanceof MetaError && error.code === 131 && error.subcode === 2534025) {
+        // Error 131/2534025: Invalid comment for private reply
+        // Try to convert to public reply if available
+        const converted = await convertPrivateReplyToPublic(item);
+        if (converted) {
+          // Mark as pending to retry with public reply
+          await query(
+            `UPDATE queue SET status='pending', claimed_at=NULL, claimed_by=NULL, failure_reason=NULL, updated_at=now() WHERE id=$1`,
+            [item.id],
+          );
+          return true;
+        }
+      }
+
       await fail(item, error);
     }
     return true;

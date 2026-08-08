@@ -7,10 +7,43 @@ function graphUrl(path: string): string {
   return `${GRAPH}/${env.META_API_VERSION}${path}`;
 }
 
+export class MetaError extends Error {
+  code?: number;
+  subcode?: number;
+  metaMessage?: string;
+
+  constructor(statusCode: number, data: any) {
+    let errorData = data?.error || data;
+    let code = errorData?.code;
+    let subcode = errorData?.error_subcode;
+    let message = errorData?.message || errorData?.error_message || JSON.stringify(data);
+
+    // Handle different error response formats from Meta
+    if (!code && typeof data?.error === "string") {
+      message = data.error;
+    }
+    if (!code && data?.error_code) {
+      code = data.error_code;
+      subcode = data?.error_subcode;
+    }
+
+    super(`Meta API ${statusCode}: ${message}`);
+    this.name = "MetaError";
+    this.code = code;
+    this.subcode = subcode;
+    this.metaMessage = message;
+
+    // Log full error for debugging
+    if (code || subcode) {
+      console.log(`[MetaError] code=${code}, subcode=${subcode}, message=${message}`);
+    }
+  }
+}
+
 async function parseMetaResponse(response: Response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(`Meta API ${response.status}: ${JSON.stringify(data)}`);
+    throw new MetaError(response.status, data);
   }
   return data;
 }
