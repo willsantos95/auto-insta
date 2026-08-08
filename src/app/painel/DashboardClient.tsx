@@ -439,8 +439,7 @@ export default function DashboardClient({
                           >
                             <option value="contains">Contém qualquer uma das palavras-chave</option>
                             <option value="exact">Exatamente</option>
-                            <option value="not_contains">Não contém</option>
-                            <option value="regex">Expressão Regular</option>
+                            <option value="any">Qualquer comentário (responder todos)</option>
                           </select>
                         </div>
 
